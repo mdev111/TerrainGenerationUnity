@@ -4,8 +4,10 @@ using UnityEngine;
 
 public static class MeshGenerator
 {
-   public static MeshData GenerateTerrainMesh(float[,] heightMap, float heightMultiplier, AnimationCurve heightCurve, int levelOfDetail)
+   public static MeshData GenerateTerrainMesh(float[,] heightMap, float heightMultiplier, AnimationCurve _heightCurve, int levelOfDetail)
     {
+        //now each thread has its own animation curve
+        AnimationCurve heightCurve = new AnimationCurve(_heightCurve.keys);
         int width = heightMap.GetLength(0);
         int height = heightMap.GetLength(1);
 
@@ -21,7 +23,12 @@ public static class MeshGenerator
         {
             for (int x = 0; x < width; x += meshSimplificationIncrement)
             {
+                //lock makes the calculation slower
+                //lock (heightCurve)
+                //{
                 meshData.vertices[vertexIndex] = new Vector3(topLeftX+ x, heightCurve.Evaluate( heightMap[x, y])*heightMultiplier, topLeftZ-y);
+               
+                //}
                 meshData.uvs[vertexIndex] = new Vector2(x / (float)width, y / (float)height); //vector represents the percentage of x and y: where the point is located on the map in percents
                 if (x<width-1 &&y < height - 1)
                 {
