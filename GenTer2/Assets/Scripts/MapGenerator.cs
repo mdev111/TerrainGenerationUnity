@@ -14,9 +14,11 @@ public class MapGenerator : MonoBehaviour
     };
     public DrawMode drawMode;
 
+    public Noise.NormalizeMode normalizeMode;
+
     public const int mapChunkSize = 241;//because 241-1 is divisible by 2,4,6,8,10,12
     [Range(0,6)]
-    public int levelOfDetail;//*2 =2,4,6,8,10,12 - the bigger = the less vertices will be evaluated, (good if too big terrain)
+    public int editorPreviewLOD;//*2 =2,4,6,8,10,12 - the bigger = the less vertices will be evaluated, (good if too big terrain)
     public float noiseScale;
 
     public int octaves;
@@ -40,7 +42,7 @@ public class MapGenerator : MonoBehaviour
 
     public void DrawMapInEditor()
     {
-        MapData mapData = GenerateMapData();
+        MapData mapData = GenerateMapData(Vector2.zero);
         MapDisplay display = FindObjectOfType<MapDisplay>();
         if (drawMode == DrawMode.NoiseMap)
         {
@@ -52,11 +54,11 @@ public class MapGenerator : MonoBehaviour
         }
         else if (drawMode == DrawMode.Mesh)
         {
-            display.DrawMesh(MeshGenerator.GenerateTerrainMesh(mapData.heightMap, meshHeightMultiplier, meshHeightCurve, levelOfDetail), TextureGenerator.TextureFromColourMap(mapData.colourMap, mapChunkSize, mapChunkSize));
+            display.DrawMesh(MeshGenerator.GenerateTerrainMesh(mapData.heightMap, meshHeightMultiplier, meshHeightCurve, editorPreviewLOD), TextureGenerator.TextureFromColourMap(mapData.colourMap, mapChunkSize, mapChunkSize));
         }
     }
     //MapData is type of parameter method expects
-    public void RequestMapData(Action<MapData> callback)
+    public void RequestMapData(Vector2 center, Action<MapData> callback)
     {
 
         //delegate
@@ -64,15 +66,15 @@ public class MapGenerator : MonoBehaviour
         //mapDataThread with the callback parameter
         ThreadStart threadStart = delegate
         {
-            MapDataThread(callback);
+            MapDataThread(center, callback);
         };
         new Thread(threadStart).Start();
         // now MapDataThread is running on the different thread
     }
 
-    void MapDataThread(Action<MapData> callback)
+    void MapDataThread(Vector2 center, Action<MapData> callback)
     {
-        MapData mapData = GenerateMapData();
+        MapData mapData = GenerateMapData(center);
         //if we call a method inside of a thread, this method will be executed from the very same thread as well
         //now add this mapdata together with the callback to the queue
         //mutex so that only one thread can access the queue at a time
@@ -83,7 +85,7 @@ public class MapGenerator : MonoBehaviour
     }
 
     //MapData is type of parameter method expects
-    public void RequestMeshData(MapData mapData, Action<MeshData> callback)
+    public void RequestMeshData(MapData mapData, int lod, Action<MeshData> callback)
     {
 
         //delegate
@@ -91,15 +93,15 @@ public class MapGenerator : MonoBehaviour
         //mapDataThread with the callback parameter
         ThreadStart threadStart = delegate
         {
-            MeshDataThread(mapData, callback);
+            MeshDataThread(mapData,lod, callback);
         };
         new Thread(threadStart).Start();
         // now MapDataThread is running on the different thread
     }
 
-    void MeshDataThread(MapData mapData, Action<MeshData> callback)
+    void MeshDataThread(MapData mapData, int lod, Action<MeshData> callback)
     {
-        MeshData meshData = MeshGenerator.GenerateTerrainMesh(mapData.heightMap,meshHeightMultiplier, meshHeightCurve,levelOfDetail);
+        MeshData meshData = MeshGenerator.GenerateTerrainMesh(mapData.heightMap,meshHeightMultiplier, meshHeightCurve, lod);
         //if we call a method inside of a thread, this method will be executed from the very same thread as well
         //now add this mapdata together with the callback to the queue
         //mutex so that only one thread can access the queue at a time
@@ -130,9 +132,11 @@ public class MapGenerator : MonoBehaviour
         }
     }
 
-    MapData GenerateMapData()
+    MapData GenerateMapData(Vector2 center)
     {
-        float[,] noiseMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, seed, noiseScale,octaves,persistance,lacunarity,offset);
+
+        //center + offset so that the map is not distorted?
+        float[,] noiseMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, seed, noiseScale,octaves,persistance,lacunarity, center + offset, normalizeMode);
 
         Color[] colourMap = new Color[mapChunkSize * mapChunkSize];
         for (int y = 0; y < mapChunkSize; y++)
@@ -142,10 +146,14 @@ public class MapGenerator : MonoBehaviour
                 float currentHeight = noiseMap[x, y];
                 for (int i = 0; i < regions.Length; i++)
                 {
-                    if(currentHeight<= regions[i].height)
+                    if(currentHeight >= regions[i].height)
                     {
                         colourMap[y * mapChunkSize + x] = regions[i].colour;
-                        break;
+                        
+                    }
+                    else
+                    {
+break;
                     }
 
                 }
