@@ -15,14 +15,15 @@ public class MapGenerator : MonoBehaviour
     public DrawMode drawMode;
 
     public Noise.NormalizeMode normalizeMode;
-
-    public const int mapChunkSize = 241;//because 241-1 is divisible by 2,4,6,8,10,12
-    [Range(0,6)]
+    //because 241-1 is divisible by 2,4,6,8,10,12
+    //now added border line = +2 => 241-2 = 239
+    public const int mapChunkSize = 239;
+    [Range(0, 6)]
     public int editorPreviewLOD;//*2 =2,4,6,8,10,12 - the bigger = the less vertices will be evaluated, (good if too big terrain)
     public float noiseScale;
 
     public int octaves;
-    [Range(0,1)]
+    [Range(0, 1)]
     public float persistance;// should always be between 0 and 1
     public float lacunarity;
 
@@ -91,10 +92,11 @@ public class MapGenerator : MonoBehaviour
         //if we call a method inside of a thread, this method will be executed from the very same thread as well
         //now add this mapdata together with the callback to the queue
         //mutex so that only one thread can access the queue at a time
-        lock (mapDataThreadInfoQueue) {
+        lock (mapDataThreadInfoQueue)
+        {
             mapDataThreadInfoQueue.Enqueue(new MapThreadInfo<MapData>(callback, mapData));
         }
-       
+
     }
 
     //MapData is type of parameter method expects
@@ -106,7 +108,7 @@ public class MapGenerator : MonoBehaviour
         //mapDataThread with the callback parameter
         ThreadStart threadStart = delegate
         {
-            MeshDataThread(mapData,lod, callback);
+            MeshDataThread(mapData, lod, callback);
         };
         new Thread(threadStart).Start();
         // now MapDataThread is running on the different thread
@@ -114,7 +116,7 @@ public class MapGenerator : MonoBehaviour
 
     void MeshDataThread(MapData mapData, int lod, Action<MeshData> callback)
     {
-        MeshData meshData = MeshGenerator.GenerateTerrainMesh(mapData.heightMap,meshHeightMultiplier, meshHeightCurve, lod);
+        MeshData meshData = MeshGenerator.GenerateTerrainMesh(mapData.heightMap, meshHeightMultiplier, meshHeightCurve, lod);
         //if we call a method inside of a thread, this method will be executed from the very same thread as well
         //now add this mapdata together with the callback to the queue
         //mutex so that only one thread can access the queue at a time
@@ -127,7 +129,7 @@ public class MapGenerator : MonoBehaviour
 
     void Update()
     {
-        if(mapDataThreadInfoQueue.Count > 0)
+        if (mapDataThreadInfoQueue.Count > 0)
         {
             for (int i = 0; i < mapDataThreadInfoQueue.Count; i++)
             {
@@ -149,7 +151,8 @@ public class MapGenerator : MonoBehaviour
     {
 
         //center + offset so that the map is not distorted?
-        float[,] noiseMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, seed, noiseScale,octaves,persistance,lacunarity, center + offset, normalizeMode);
+        //+2 for the border vertices
+        float[,] noiseMap = Noise.GenerateNoiseMap(mapChunkSize + 2, mapChunkSize + 2, seed, noiseScale, octaves, persistance, lacunarity, center + offset, normalizeMode);
 
         Color[] colourMap = new Color[mapChunkSize * mapChunkSize];
         for (int y = 0; y < mapChunkSize; y++)
@@ -163,14 +166,14 @@ public class MapGenerator : MonoBehaviour
                 float currentHeight = noiseMap[x, y];
                 for (int i = 0; i < regions.Length; i++)
                 {
-                    if(currentHeight >= regions[i].height)
+                    if (currentHeight >= regions[i].height)
                     {
                         colourMap[y * mapChunkSize + x] = regions[i].colour;
-                        
+
                     }
                     else
                     {
-break;
+                        break;
                     }
 
                 }
@@ -185,12 +188,12 @@ break;
 
     private void OnValidate() //called every time the variables changed in the inspector
     {
-        
-        if (lacunarity <1)
+
+        if (lacunarity < 1)
         {
             lacunarity = 1;
         }
-        if(octaves < 1)
+        if (octaves < 1)
         {
             octaves = 1;
         }
@@ -213,7 +216,7 @@ break;
 
 [System.Serializable]// so that it will show up in the inspector
 public struct TerrainType
-{ 
+{
     //not readonly as it will not show in the inspector
     public string name;//label the terrain: water, grass
     public float height;// height at which this colour is applied (from 0 to 1 range-meaning: till(not from) what value of height this stuff is starting to show up as another color)
@@ -224,8 +227,8 @@ public struct MapData
 {
     public readonly float[,] heightMap;
     public readonly Color[] colourMap;
-    
-    public MapData(float [,] heightMap, Color[] colourMap)
+
+    public MapData(float[,] heightMap, Color[] colourMap)
     {
         this.heightMap = heightMap;
         this.colourMap = colourMap;
