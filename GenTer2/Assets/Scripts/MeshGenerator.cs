@@ -74,6 +74,9 @@ public static class MeshGenerator
                 vertexIndex++;
             }
         }
+
+        //so that calculation of normals is also on a separate thread
+        meshData.BakeNormals();
         return meshData;// for the threading (you cannot return mesh from inside the thread?)
     }
 }
@@ -83,6 +86,7 @@ public class MeshData
     Vector3[] vertices;
     int[] triangles;
     Vector2[] uvs;
+    Vector3[] bakedNormals;
 
     Vector3[] borderVertices;
     int[] borderTriangles;
@@ -204,6 +208,11 @@ public class MeshData
         return Vector3.Cross(sideAB, sideAC).normalized;
     }
 
+    public void BakeNormals()
+    {
+        bakedNormals = CalculateNormals();
+    }
+
     public Mesh CreateMesh()
     {
         Mesh mesh = new Mesh();
@@ -211,7 +220,7 @@ public class MeshData
         mesh.triangles = triangles;
         mesh.uv = uvs;
         //mesh.RecalculateNormals();//for the lighting to show nicely
-        mesh.normals = CalculateNormals();
+        mesh.normals = bakedNormals;
         return mesh;
     }
 }
