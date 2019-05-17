@@ -47,7 +47,7 @@ public class EndlessTerrain : MonoBehaviour
             viewerPositionOld = viewerPosition;
             UpdateVisibleChunks();
         }
-
+        UpdateVisibleChunks();
     }
     void UpdateVisibleChunks()
     {
@@ -194,7 +194,7 @@ public class EndlessTerrain : MonoBehaviour
                     //we generate(get) collider mesh only if player close enough
                     if(lodIndex == 0)
                     {
-                        if (collisionLODMesh!=null&& collisionLODMesh.hasMesh)
+                        if (collisionLODMesh.hasMesh)
                         {
                             meshCollider.sharedMesh = collisionLODMesh.mesh;
                         }

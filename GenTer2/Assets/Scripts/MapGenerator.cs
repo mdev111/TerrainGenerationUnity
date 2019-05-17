@@ -10,7 +10,7 @@ public class MapGenerator : MonoBehaviour
 {
     public enum DrawMode
     {
-        NoiseMap, ColorMap, Mesh, FalloffMap
+        NoiseMap, ColorMap, Mesh, FalloffMap,CorrosionMap
     };
     public DrawMode drawMode;
 
@@ -31,6 +31,7 @@ public class MapGenerator : MonoBehaviour
     public Vector2 offset;
 
     public bool useFalloff;
+    public bool useCorrosion;
 
     public float meshHeightMultiplier;
 
@@ -41,6 +42,7 @@ public class MapGenerator : MonoBehaviour
     public TerrainType[] regions;
 
     float[,] falloffMap;
+    float[,] corrosionMap;
 
     Queue<MapThreadInfo<MapData>> mapDataThreadInfoQueue = new Queue<MapThreadInfo<MapData>>();
     Queue<MapThreadInfo<MeshData>> meshDataThreadInfoQueue = new Queue<MapThreadInfo<MeshData>>();
@@ -48,6 +50,7 @@ public class MapGenerator : MonoBehaviour
     void Awake()
     {
         falloffMap = FalloffGenerator.GenerateFalloffMap(mapChunkSize);
+        
     }
 
     public void DrawMapInEditor()
@@ -69,6 +72,10 @@ public class MapGenerator : MonoBehaviour
         else if (drawMode == DrawMode.FalloffMap)
         {
             display.DrawTexture(TextureGenerator.TextureFromHeightMap(FalloffGenerator.GenerateFalloffMap(mapChunkSize)));
+        }
+        else if (drawMode == DrawMode.CorrosionMap)
+        {
+            display.DrawTexture(TextureGenerator.TextureFromHeightMap(CorrosionMapGenerator.GetCorrosionMap(mapChunkSize)));
         }
     }
     //MapData is type of parameter method expects
@@ -145,6 +152,7 @@ public class MapGenerator : MonoBehaviour
                 threadInfo.callback(threadInfo.parameter);
             }
         }
+        corrosionMap = CorrosionMapGenerator.GetCorrosionMap(mapChunkSize);
     }
 
     MapData GenerateMapData(Vector2 center)
@@ -162,6 +170,10 @@ public class MapGenerator : MonoBehaviour
                 if (useFalloff)
                 {
                     noiseMap[x, y] = Mathf.Clamp01(noiseMap[x, y] - falloffMap[x, y]);
+                }
+                if (useCorrosion)
+                {
+                    noiseMap[x, y] = Mathf.Clamp01(noiseMap[x, y] - corrosionMap[x, y]);
                 }
                 float currentHeight = noiseMap[x, y];
                 for (int i = 0; i < regions.Length; i++)
@@ -198,6 +210,7 @@ public class MapGenerator : MonoBehaviour
             octaves = 1;
         }
         falloffMap = FalloffGenerator.GenerateFalloffMap(mapChunkSize);
+        corrosionMap = CorrosionMapGenerator.GetCorrosionMap(mapChunkSize);
     }
     //generic so that it can handle mapdata and also meshdata
     struct MapThreadInfo<T>
